@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stage 4c: snippet search — read required to encounter chunks (Qwen3-4B).
+# Stage 4c-twin: snippet-search semantics on Qwen3-1.7B (cross-scale comparison).
 # Full dataset (2000 train / 200 val), 1 epoch = ~62 steps of 32 prompts x 8 rollouts,
 # token budget 4096 (prune pressure), eval/env/* metrics logged at steps 0/10/.../60.
 # Gate: eval/env/final_recall + final_fbeta clearly above the step-0 untrained anchor;
@@ -8,8 +8,8 @@ set -euxo pipefail
 cd "$(dirname "$0")"
 ROOT="$PWD"
 
-MODEL="Qwen/Qwen3-4B"
-RUN_NAME="stage4c-qwen3-4b-snippet-search"
+MODEL="Qwen/Qwen3-1.7B"
+RUN_NAME="stage4ctwin-qwen3-1.7b-snippet-search"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
@@ -57,7 +57,7 @@ set +e
   trainer.update_epochs_per_batch=1 \
   trainer.train_batch_size=32 \
   trainer.policy_mini_batch_size=32 \
-  trainer.micro_forward_batch_size_per_gpu=1 \
+  trainer.micro_forward_batch_size_per_gpu=2 \
   trainer.micro_train_batch_size_per_gpu=1 \
   trainer.max_prompt_length=2048 \
   generator.max_input_length=8192 \
@@ -97,7 +97,7 @@ set -e
 
 # ---------- EVAL.md ----------
 {
-  echo "# Stage 4c snippet search (Qwen3-4B) — $RUN_NAME (exit $TRAIN_EXIT)"
+  echo "# Stage 4c-twin snippet search (Qwen3-1.7B) — $RUN_NAME (exit $TRAIN_EXIT)"
   echo
   echo "## Dataset"
   sed -n '2,8p' data_EVAL.md || true
