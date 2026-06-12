@@ -55,7 +55,7 @@ set +e
   generator.inference_engine.distributed_executor_backend=mp \
   trainer.epochs=1 \
   trainer.update_epochs_per_batch=1 \
-  trainer.train_batch_size=32 \
+  trainer.train_batch_size=16 \
   trainer.policy_mini_batch_size=32 \
   trainer.micro_forward_batch_size_per_gpu=2 \
   trainer.micro_train_batch_size_per_gpu=1 \
@@ -66,7 +66,7 @@ set +e
   generator.use_conversation_multi_turn=true \
   generator.step_wise_trajectories=true \
   generator.chat_template_kwargs='{"enable_thinking": false}' \
-  generator.n_samples_per_prompt=8 \
+  generator.n_samples_per_prompt=16 \
   generator.max_turns=10 \
   generator.sampling_params.temperature=1.0 \
   generator.sampling_params.top_p=1.0 \
