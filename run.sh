@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage 4c-twin: snippet-search semantics on Qwen3-1.7B (cross-scale comparison).
 # Full dataset (2000 train / 200 val), 1 epoch = ~62 steps of 32 prompts x 8 rollouts,
-# token budget 4096 (prune pressure), eval/env/* metrics logged at steps 0/10/.../60.
+# token budget 2048 (prune pressure), eval/env/* metrics logged at steps 0/10/.../60.
 # Gate: eval/env/final_recall + final_fbeta clearly above the step-0 untrained anchor;
 # prune_accuracy high/up with n_pruned > 0; no collapse (entropy, malformed_turns).
 set -euxo pipefail
@@ -77,7 +77,7 @@ set +e
   environment.skyrl_gym.max_env_workers=16 \
   environment.skyrl_gym.chroma_search.corpus_path="$ROOT/data/corpus.jsonl" \
   environment.skyrl_gym.chroma_search.tokenizer_path="$MODEL" \
-  environment.skyrl_gym.chroma_search.token_budget=4096 \
+  environment.skyrl_gym.chroma_search.token_budget=2048 \
   environment.skyrl_gym.chroma_search.search_topk=8 \
   trainer.logger="wandb" \
   trainer.project_name="chroma-skyrl" \
