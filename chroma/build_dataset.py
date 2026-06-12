@@ -6,10 +6,11 @@ Output (under --out, default ./data):
   validation.parquet  held-out tasks from the HotpotQA validation split
   EVAL.md             dataset stats + one fully rendered sample task (written to repo root)
 
-Per task: corpus = its own 10 distractor-setting paragraphs + POOL_EXTRA paragraphs sampled
-deterministically from other tasks' contexts. Gold chunk ids are exact, derived from
-supporting_facts (title, sent_id) pairs. Everything is seeded -> all nodes regenerate
-byte-identical data.
+Per task: corpus = its own 10 distractor-setting paragraphs + POOL_EXTRA hard-negative
+paragraphs chosen by ranking every other title against the task's question with a
+BM25 index over the union of all titles' full text. Gold chunk ids are exact, derived
+from supporting_facts (title, sent_id) pairs. Everything is deterministic -> all nodes
+regenerate byte-identical data.
 """
 
 import argparse
@@ -17,6 +18,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import sys
 from collections import Counter
 
@@ -47,6 +49,61 @@ def make_chunks(title: str, sentences: list) -> list:
     return chunks
 
 
+_TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
+
+
+def _tokenize(text: str) -> list:
+    return _TOKEN_RE.findall(text.lower())
+
+
+class BM25Index:
+    """Tiny pure-numpy BM25 over the (title -> full doc text) corpus.
+
+    Used to pick the POOL_EXTRA hardest (topically-closest) distractor titles for
+    each task's question, replacing uniform-random padding.
+    """
+
+    def __init__(self, titles: list, doc_texts: list, k1: float = 1.5, b: float = 0.75):
+        self.titles = list(titles)
+        self.title_to_idx = {t: i for i, t in enumerate(self.titles)}
+        self.k1 = k1
+        self.b = b
+        N = len(self.titles)
+        self.N = N
+        doc_lens = np.zeros(N, dtype=np.float32)
+        df: dict = {}
+        raw_postings: dict = {}  # term -> list of (doc_idx, tf)
+        for i, text in enumerate(doc_texts):
+            toks = _tokenize(text)
+            doc_lens[i] = len(toks)
+            tf = Counter(toks)
+            for term, f in tf.items():
+                df[term] = df.get(term, 0) + 1
+                raw_postings.setdefault(term, []).append((i, f))
+        self.doc_lens = doc_lens
+        self.avgdl = float(doc_lens.mean()) if N > 0 else 1.0
+        self.idf: dict = {}
+        self.postings: dict = {}
+        for term, plist in raw_postings.items():
+            n = df[term]
+            self.idf[term] = float(np.log((N - n + 0.5) / (n + 0.5) + 1.0))
+            idxs = np.fromiter((p[0] for p in plist), dtype=np.int32, count=len(plist))
+            tfs = np.fromiter((p[1] for p in plist), dtype=np.float32, count=len(plist))
+            self.postings[term] = (idxs, tfs)
+
+    def score(self, query: str) -> np.ndarray:
+        scores = np.zeros(self.N, dtype=np.float32)
+        for term in set(_tokenize(query)):
+            post = self.postings.get(term)
+            if post is None:
+                continue
+            idxs, tfs = post
+            dl = self.doc_lens[idxs]
+            denom = tfs + self.k1 * (1.0 - self.b + self.b * dl / self.avgdl)
+            np.add.at(scores, idxs, self.idf[term] * (tfs * (self.k1 + 1.0)) / denom)
+        return scores
+
+
 def gold_chunk_ids(task, doc_sentences) -> list:
     """Map supporting_facts (title, sent_id) -> containing chunk ids. Skips out-of-range sent_ids."""
     gold = []
@@ -60,9 +117,8 @@ def gold_chunk_ids(task, doc_sentences) -> list:
     return gold
 
 
-def build_split(rows, all_titles, doc_sentences, split_name):
+def build_split(rows, all_titles, doc_sentences, split_name, bm25):
     records, dropped = [], 0
-    title_arr = np.array(all_titles)
     for task in rows:
         own_titles = list(task["context"]["title"])
         gold_titles = set(task["supporting_facts"]["title"])
@@ -76,12 +132,18 @@ def build_split(rows, all_titles, doc_sentences, split_name):
             dropped += 1
             continue
         rng = np.random.default_rng(stable_int(task["id"]) % (2**32))
-        own_set = set(own_titles)
-        extra = []
-        # rejection-sample distractor titles not already in the task's context
-        while len(extra) < POOL_EXTRA:
-            cand = title_arr[rng.integers(0, len(title_arr), POOL_EXTRA * 2)]
-            extra.extend([t for t in cand if t not in own_set and t not in extra])
+        # BM25 nearest-neighbor distractors: rank every non-own title against the
+        # task's question and take the POOL_EXTRA hardest (highest-scoring) ones.
+        scores = bm25.score(task["question"])
+        for t in own_titles:
+            j = bm25.title_to_idx.get(t)
+            if j is not None:
+                scores[j] = -np.inf
+        # argpartition for top-k, then sort just that slice descending for stability
+        k = min(POOL_EXTRA, bm25.N - len(own_titles))
+        top_idx = np.argpartition(-scores, k - 1)[:k]
+        top_idx = top_idx[np.argsort(-scores[top_idx])]
+        extra = [bm25.titles[i] for i in top_idx]
         doc_ids = own_titles + extra[:POOL_EXTRA]
         rng.shuffle(doc_ids)
         records.append(
@@ -140,8 +202,14 @@ def main():
                 doc_sentences.setdefault(title, sents)
     all_titles = sorted(doc_sentences)
 
-    train_recs, train_drop = build_split(train_rows, all_titles, doc_sentences, "train")
-    val_recs, val_drop = build_split(val_rows, all_titles, doc_sentences, "validation")
+    # BM25 index over every candidate title's full text (title + sentences),
+    # built once and shared across splits. Used to pick hard, topically-similar
+    # distractors per task instead of uniform random padding.
+    doc_texts = [title + " " + " ".join(doc_sentences[title]) for title in all_titles]
+    bm25 = BM25Index(all_titles, doc_texts)
+
+    train_recs, train_drop = build_split(train_rows, all_titles, doc_sentences, "train", bm25)
+    val_recs, val_drop = build_split(val_rows, all_titles, doc_sentences, "validation", bm25)
     train_recs, val_recs = train_recs[: args.n_train], val_recs[: args.n_val]
 
     # corpus: only docs actually referenced by a kept task
