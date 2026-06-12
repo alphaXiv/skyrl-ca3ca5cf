@@ -45,7 +45,7 @@ class ChromaSearchEnvConfig:
     read_max_chunks: int = 10
     max_tool_calls_per_turn: int = 4
     max_final_chunks: int = 20
-    fbeta: float = 4.0
+    fbeta: float = 1.0
     w_fbeta: float = 0.7
     w_traj_recall: float = 0.3
     answer_bonus: float = 0.2
