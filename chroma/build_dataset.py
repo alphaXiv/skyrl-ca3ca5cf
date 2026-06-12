@@ -30,7 +30,7 @@ SEED = 42
 N_TRAIN = 2000
 N_VAL = 200
 POOL_EXTRA = 190  # extra distractor docs sampled per task (total corpus ~200 docs)
-SENTS_PER_CHUNK = 3
+SENTS_PER_CHUNK = 1
 
 
 def stable_int(s: str) -> int:
