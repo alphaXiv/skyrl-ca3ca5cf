@@ -15,9 +15,12 @@ should prune chunks you have decided are irrelevant. If you hit the hard limit, 
 call except <prune> is rejected until you free space.
 
 Tools — call them with XML tags, one or more per turn (results come back in order):
-<search>natural language query</search> — BM25 search over the corpus, returns top chunks.
-<grep>regex pattern</grep> — regex search over the corpus, returns up to 5 matching chunks.
-<read>document title</read> — returns all chunks of that document.
+<search>natural language query</search> — BM25 search; returns matching DOCUMENT titles \
+with a short snippet each. Snippets are not evidence — you must <read> a document to see \
+and collect its chunks.
+<grep>regex pattern</grep> — regex search over chunk texts, returns up to 5 matching chunks.
+<read>document title</read> — returns all chunks of that document (this is how chunks enter \
+your evidence set).
 <prune>chunk_id_1, chunk_id_2</prune> — permanently remove those chunks' text from your \
 context (their ids stay visible, marked pruned). Prune chunks that turned out irrelevant.
 <finish>chunk_id_1, chunk_id_2, ...</finish> — end the episode, returning the final set of \
@@ -25,8 +28,9 @@ evidence chunk ids, most important first. Aim to include every chunk needed to a
 question and as few irrelevant ones as possible.
 
 Strategy: decompose the question into sub-queries; questions here require evidence from TWO \
-different documents, so issue multiple searches; read promising documents; prune aggressively \
-once a chunk is clearly irrelevant; then finish with the evidence set.
+different documents, so issue multiple searches; READ the promising documents (only chunks \
+you have read or grepped can go in your final set); prune aggressively once a chunk is \
+clearly irrelevant; then finish with the evidence set.
 
 Think briefly before each tool call. Chunk ids look like 'Document Title::c0'."""
 

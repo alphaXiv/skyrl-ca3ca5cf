@@ -41,6 +41,7 @@ class ChromaSearchEnvConfig:
     tokenizer_path: str = "Qwen/Qwen3-1.7B"
     token_budget: int = 4096
     search_topk: int = 8
+    snippet_chars: int = 90
     grep_max_hits: int = 5
     read_max_chunks: int = 10
     max_tool_calls_per_turn: int = 4
@@ -110,6 +111,7 @@ class ChromaSearchEnv(BaseTextEnv):
 
         self._bm25 = None  # built lazily on first search
         self._bm25_ids: List[str] = []
+        self._read_docs: set = set()
 
         # episode state
         self.chat_history: Optional[ConversationType] = None
@@ -179,11 +181,24 @@ class ChromaSearchEnv(BaseTextEnv):
             return f'No results for search "{query}" (empty query).'
         scores = self._bm25.get_scores(q)
         ranked = sorted(zip(self._bm25_ids, scores), key=lambda x: -x[1])
-        hits = [cid for cid, s in ranked if s > 0 and cid not in self.encountered][: self.cfg.search_topk]
-        if not hits:
-            return f'No new results for search "{query}" (all matches already seen or no match).'
-        self._mark_encountered(hits)
-        return f'Results for search "{query}":\n' + "\n".join(self._chunk_block(c) for c in hits)
+        # doc-level hits: best-scoring chunk per doc; snippets only — chunk text must be
+        # obtained via <read>, so search alone can never reach the gold evidence
+        seen_docs, lines = set(), []
+        for cid, sc in ranked:
+            if sc <= 0 or len(lines) >= self.cfg.search_topk:
+                break
+            doc = cid.split("::")[0]
+            if doc in seen_docs or doc in self._read_docs:
+                continue
+            seen_docs.add(doc)
+            snippet = self.chunks[cid][: self.cfg.snippet_chars]
+            lines.append(f'<doc title="{doc}" top_chunk="{cid}">{snippet}...</doc>')
+        if not lines:
+            return f'No new results for search "{query}" (all matching docs already read or no match).'
+        return (
+            f'Doc results for search "{query}" (use <read>title</read> to see full chunks):\n'
+            + "\n".join(lines)
+        )
 
     def _tool_grep(self, pattern: str) -> str:
         try:
@@ -211,6 +226,7 @@ class ChromaSearchEnv(BaseTextEnv):
             else:
                 return f"ERROR: no document titled {title!r} in the corpus."
         cids = [c["id"] for c in self.docs[title][: self.cfg.read_max_chunks]]
+        self._read_docs.add(title)
         self._mark_encountered(cids)
         return f'Document "{title}":\n' + "\n".join(self._chunk_block(c) for c in cids)
 
@@ -331,7 +347,9 @@ class ChromaSearchEnv(BaseTextEnv):
         finish_arg = next((arg for tag, arg in calls if tag == "finish"), None)
         if finish_arg is not None:
             ids = [s.strip().strip("'\"") for s in finish_arg.split(",") if s.strip()]
-            valid = [c for c in ids if c in self.chunks]
+            # only chunks the agent actually encountered (via read/grep) count — search
+            # snippets alone are not evidence
+            valid = [c for c in ids if c in self.chunks and c in self.encountered]
             return self._terminate(valid, finished=True)
 
         over_hard = self._count_tokens() >= self.cfg.token_budget

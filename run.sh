@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stage 4b: harder tasks — 1000-doc per-task corpora on Qwen3-4B (anti-saturation).
+# Stage 4c: snippet search — read required to encounter chunks (Qwen3-4B).
 # Full dataset (2000 train / 200 val), 1 epoch = ~62 steps of 32 prompts x 8 rollouts,
 # token budget 4096 (prune pressure), eval/env/* metrics logged at steps 0/10/.../60.
 # Gate: eval/env/final_recall + final_fbeta clearly above the step-0 untrained anchor;
@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 ROOT="$PWD"
 
 MODEL="Qwen/Qwen3-4B"
-RUN_NAME="stage4b-qwen3-4b-pool990"
+RUN_NAME="stage4c-qwen3-4b-snippet-search"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
@@ -97,7 +97,7 @@ set -e
 
 # ---------- EVAL.md ----------
 {
-  echo "# Stage 4b harder tasks (pool 990, Qwen3-4B) — $RUN_NAME (exit $TRAIN_EXIT)"
+  echo "# Stage 4c snippet search (Qwen3-4B) — $RUN_NAME (exit $TRAIN_EXIT)"
   echo
   echo "## Dataset"
   sed -n '2,8p' data_EVAL.md || true
