@@ -60,7 +60,7 @@ def gold_chunk_ids(task, doc_sentences) -> list:
     return gold
 
 
-def build_split(rows, all_titles, doc_sentences, split_name):
+def build_split(rows, all_titles, doc_sentences, split_name, pool_extra=POOL_EXTRA):
     records, dropped = [], 0
     title_arr = np.array(all_titles)
     for task in rows:
@@ -77,12 +77,16 @@ def build_split(rows, all_titles, doc_sentences, split_name):
             continue
         rng = np.random.default_rng(stable_int(task["id"]) % (2**32))
         own_set = set(own_titles)
-        extra = []
+        pool_extra = min(pool_extra, len(all_titles) - len(own_set) - 1)
+        extra, extra_seen = [], set()
         # rejection-sample distractor titles not already in the task's context
-        while len(extra) < POOL_EXTRA:
-            cand = title_arr[rng.integers(0, len(title_arr), POOL_EXTRA * 2)]
-            extra.extend([t for t in cand if t not in own_set and t not in extra])
-        doc_ids = own_titles + extra[:POOL_EXTRA]
+        while len(extra) < pool_extra:
+            cand = title_arr[rng.integers(0, len(title_arr), pool_extra * 2)]
+            for t in cand:
+                if t not in own_set and t not in extra_seen:
+                    extra.append(t)
+                    extra_seen.add(t)
+        doc_ids = own_titles + extra[:pool_extra]
         rng.shuffle(doc_ids)
         records.append(
             {
@@ -117,6 +121,7 @@ def main():
     ap.add_argument("--n-train", type=int, default=N_TRAIN)
     ap.add_argument("--n-val", type=int, default=N_VAL)
     ap.add_argument("--eval-md", default="EVAL.md")
+    ap.add_argument("--pool-extra", type=int, default=POOL_EXTRA)
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -140,8 +145,8 @@ def main():
                 doc_sentences.setdefault(title, sents)
     all_titles = sorted(doc_sentences)
 
-    train_recs, train_drop = build_split(train_rows, all_titles, doc_sentences, "train")
-    val_recs, val_drop = build_split(val_rows, all_titles, doc_sentences, "validation")
+    train_recs, train_drop = build_split(train_rows, all_titles, doc_sentences, "train", args.pool_extra)
+    val_recs, val_drop = build_split(val_rows, all_titles, doc_sentences, "validation", args.pool_extra)
     train_recs, val_recs = train_recs[: args.n_train], val_recs[: args.n_val]
 
     # corpus: only docs actually referenced by a kept task

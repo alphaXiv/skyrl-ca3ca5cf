@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stage 4a: scale-up — identical Stage-3 recipe on Qwen3-4B, 1000 tasks (31 steps).
+# Stage 4b: harder tasks — 1000-doc per-task corpora on Qwen3-4B (anti-saturation).
 # Full dataset (2000 train / 200 val), 1 epoch = ~62 steps of 32 prompts x 8 rollouts,
 # token budget 4096 (prune pressure), eval/env/* metrics logged at steps 0/10/.../60.
 # Gate: eval/env/final_recall + final_fbeta clearly above the step-0 untrained anchor;
@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 ROOT="$PWD"
 
 MODEL="Qwen/Qwen3-4B"
-RUN_NAME="stage4a-qwen3-4b-cispo-lora-b4096"
+RUN_NAME="stage4b-qwen3-4b-pool990"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
@@ -24,7 +24,7 @@ uv pip install --python .venv/bin/python -q rank-bm25 pandas pyarrow
 .venv/bin/ray start --head --num-gpus="$NUM_GPUS"
 
 # ---------- dataset (full size; deterministic, gitignored) ----------
-.venv/bin/python chroma/build_dataset.py --out data --n-train 1000 --n-val 200 --eval-md data_EVAL.md
+.venv/bin/python chroma/build_dataset.py --out data --n-train 1000 --n-val 200 --pool-extra 990 --eval-md data_EVAL.md
 
 # ---------- training ----------
 set +e
@@ -97,7 +97,7 @@ set -e
 
 # ---------- EVAL.md ----------
 {
-  echo "# Stage 4a scale-up (Qwen3-4B) — $RUN_NAME (exit $TRAIN_EXIT)"
+  echo "# Stage 4b harder tasks (pool 990, Qwen3-4B) — $RUN_NAME (exit $TRAIN_EXIT)"
   echo
   echo "## Dataset"
   sed -n '2,8p' data_EVAL.md || true

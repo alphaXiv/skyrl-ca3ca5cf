@@ -55,6 +55,7 @@ class ChromaSearchEnvConfig:
 
 
 _CORPUS_CACHE: Dict[str, Dict[str, List[Dict[str, str]]]] = {}
+_BM25_CACHE: Dict[Any, Any] = {}
 _TOKENIZER_CACHE: Dict[str, Any] = {}
 _CACHE_LOCK = threading.Lock()
 
@@ -159,8 +160,20 @@ class ChromaSearchEnv(BaseTextEnv):
                 from rank_bm25 import BM25Okapi
             except ImportError:
                 return "ERROR: BM25 backend unavailable."
-            self._bm25_ids = list(self.chunks)
-            self._bm25 = BM25Okapi([_bm25_tokenize(self.chunks[c]) for c in self._bm25_ids])
+            # cache the index per task corpus: the 8 GRPO rollouts and repeated evals
+            # of one task share the same ~1700-chunk corpus
+            cache_key = (self.cfg.corpus_path, tuple(sorted(self.docs)))
+            with _CACHE_LOCK:
+                hit = _BM25_CACHE.get(cache_key)
+            if hit is not None:
+                self._bm25_ids, self._bm25 = hit
+            else:
+                self._bm25_ids = list(self.chunks)
+                self._bm25 = BM25Okapi([_bm25_tokenize(self.chunks[c]) for c in self._bm25_ids])
+                with _CACHE_LOCK:
+                    if len(_BM25_CACHE) > 256:
+                        _BM25_CACHE.clear()
+                    _BM25_CACHE[cache_key] = (self._bm25_ids, self._bm25)
         q = _bm25_tokenize(query)
         if not q:
             return f'No results for search "{query}" (empty query).'
