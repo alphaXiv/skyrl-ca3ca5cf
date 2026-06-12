@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Stage 4a: scale-up — identical Stage-3 recipe on Qwen3-4B, 1000 tasks (31 steps).
-# Full dataset (2000 train / 200 val), 1 epoch = ~62 steps of 32 prompts x 8 rollouts,
-# token budget 4096 (prune pressure), eval/env/* metrics logged at steps 0/10/.../60.
+# Stage 4b: scale-up — identical Stage-4a recipe on Qwen3-8B, 500 tasks (~15 steps).
+# Halved --n-train to keep wall-clock manageable on 4xH100; everything else
+# (LoRA r32/a64, CISPO, budget 4096, topk 8, n_samples=8, micro_forward=1) is
+# unchanged so the 1.7B -> 4B -> 8B trajectory is a clean scaling sweep.
 # Gate: eval/env/final_recall + final_fbeta clearly above the step-0 untrained anchor;
 # prune_accuracy high/up with n_pruned > 0; no collapse (entropy, malformed_turns).
 set -euxo pipefail
 cd "$(dirname "$0")"
 ROOT="$PWD"
 
-MODEL="Qwen/Qwen3-4B"
-RUN_NAME="stage4a-qwen3-4b-cispo-lora-b4096"
+MODEL="Qwen/Qwen3-8B"
+RUN_NAME="stage4b-qwen3-8b-cispo-lora-b4096"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
@@ -24,7 +25,7 @@ uv pip install --python .venv/bin/python -q rank-bm25 pandas pyarrow
 .venv/bin/ray start --head --num-gpus="$NUM_GPUS"
 
 # ---------- dataset (full size; deterministic, gitignored) ----------
-.venv/bin/python chroma/build_dataset.py --out data --n-train 1000 --n-val 200 --eval-md data_EVAL.md
+.venv/bin/python chroma/build_dataset.py --out data --n-train 500 --n-val 200 --eval-md data_EVAL.md
 
 # ---------- training ----------
 set +e
@@ -97,7 +98,7 @@ set -e
 
 # ---------- EVAL.md ----------
 {
-  echo "# Stage 4a scale-up (Qwen3-4B) — $RUN_NAME (exit $TRAIN_EXIT)"
+  echo "# Stage 4b scale-up (Qwen3-8B) — $RUN_NAME (exit $TRAIN_EXIT)"
   echo
   echo "## Dataset"
   sed -n '2,8p' data_EVAL.md || true
