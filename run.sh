@@ -61,11 +61,11 @@ set +e
   trainer.micro_train_batch_size_per_gpu=1 \
   trainer.max_prompt_length=2048 \
   generator.max_input_length=12288 \
-  generator.sampling_params.max_generate_length=1024 \
+  generator.sampling_params.max_generate_length=3072 \
   generator.batched=false \
   generator.use_conversation_multi_turn=true \
   generator.step_wise_trajectories=true \
-  generator.chat_template_kwargs='{"enable_thinking": false}' \
+  generator.chat_template_kwargs='{"enable_thinking": true}' \
   generator.n_samples_per_prompt=4 \
   generator.max_turns=10 \
   generator.sampling_params.temperature=1.0 \
