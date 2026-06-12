@@ -34,6 +34,7 @@ set +e
   trainer.algorithm.advantage_estimator="grpo" \
   trainer.algorithm.policy_loss_type="cispo" \
   trainer.algorithm.use_kl_loss=false \
+  trainer.algorithm.zero_variance_filter=true \
   trainer.policy.model.path="$MODEL" \
   trainer.policy.model.lora.rank=32 \
   trainer.policy.model.lora.alpha=64 \
@@ -66,7 +67,7 @@ set +e
   generator.use_conversation_multi_turn=true \
   generator.step_wise_trajectories=true \
   generator.chat_template_kwargs='{"enable_thinking": false}' \
-  generator.n_samples_per_prompt=4 \
+  generator.n_samples_per_prompt=8 \
   generator.max_turns=10 \
   generator.sampling_params.temperature=1.0 \
   generator.sampling_params.top_p=1.0 \
