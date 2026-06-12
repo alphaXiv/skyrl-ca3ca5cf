@@ -65,7 +65,7 @@ set +e
   generator.batched=false \
   generator.use_conversation_multi_turn=true \
   generator.step_wise_trajectories=true \
-  generator.chat_template_kwargs='{"enable_thinking": false}' \
+  generator.chat_template_kwargs='{"enable_thinking": true}' \
   generator.n_samples_per_prompt=8 \
   generator.max_turns=10 \
   generator.sampling_params.temperature=1.0 \
