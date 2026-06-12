@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 ROOT="$PWD"
 
 MODEL="Qwen/Qwen3-4B"
-RUN_NAME="stage4a-qwen3-4b-cispo-lora-b4096"
+RUN_NAME="stage4a-qwen3-4b-cispo-lora-b4096-n2000"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
@@ -24,7 +24,7 @@ uv pip install --python .venv/bin/python -q rank-bm25 pandas pyarrow
 .venv/bin/ray start --head --num-gpus="$NUM_GPUS"
 
 # ---------- dataset (full size; deterministic, gitignored) ----------
-.venv/bin/python chroma/build_dataset.py --out data --n-train 1000 --n-val 200 --eval-md data_EVAL.md
+.venv/bin/python chroma/build_dataset.py --out data --n-train 2000 --n-val 200 --eval-md data_EVAL.md
 
 # ---------- training ----------
 set +e
