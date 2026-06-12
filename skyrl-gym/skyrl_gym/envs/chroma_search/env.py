@@ -16,10 +16,10 @@ mutates earlier tool-result messages in place; the next turn's prompt is rebuilt
 the pruned history. The full unpruned trajectory is kept env-side for reward.
 
 Reward (final step only, intermediate steps 0):
-  0.7 * F_beta(final set vs gold)  (beta=4 -> recall-weighted)
-+ 0.3 * trajectory_recall          (gold chunks encountered at any point)
+  0.5 * F_beta(final set vs gold)  (beta=4 -> recall-weighted)
++ 0.5 * trajectory_recall          (gold chunks encountered at any point)
 + answer bonus                     (a final chunk contains the answer string)
-- turn penalty, single-chunk-prune-streak penalty, no-finish penalty
+- single-chunk-prune-streak penalty, no-finish penalty
 clamped to [0, 2].
 """
 
@@ -47,10 +47,10 @@ class ChromaSearchEnvConfig:
     max_tool_calls_per_turn: int = 4
     max_final_chunks: int = 20
     fbeta: float = 4.0
-    w_fbeta: float = 0.7
-    w_traj_recall: float = 0.3
+    w_fbeta: float = 0.5
+    w_traj_recall: float = 0.5
     answer_bonus: float = 0.2
-    turn_penalty: float = 0.01
+    turn_penalty: float = 0.0
     prune_streak_penalty: float = 0.05
     no_finish_penalty: float = 0.1
 
