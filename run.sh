@@ -78,7 +78,7 @@ set +e
   environment.skyrl_gym.chroma_search.corpus_path="$ROOT/data/corpus.jsonl" \
   environment.skyrl_gym.chroma_search.tokenizer_path="$MODEL" \
   environment.skyrl_gym.chroma_search.token_budget=4096 \
-  environment.skyrl_gym.chroma_search.search_topk=8 \
+  environment.skyrl_gym.chroma_search.search_topk=3 \
   trainer.logger="wandb" \
   trainer.project_name="chroma-skyrl" \
   trainer.run_name="$RUN_NAME" \
