@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 ROOT="$PWD"
 
 MODEL="Qwen/Qwen3-4B"
-RUN_NAME="stage4a-qwen3-4b-cispo-lora-b4096"
+RUN_NAME="stage4a-qwen3-4b-cispo-lora-b2048-k4"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
@@ -77,8 +77,8 @@ set +e
   environment.skyrl_gym.max_env_workers=16 \
   environment.skyrl_gym.chroma_search.corpus_path="$ROOT/data/corpus.jsonl" \
   environment.skyrl_gym.chroma_search.tokenizer_path="$MODEL" \
-  environment.skyrl_gym.chroma_search.token_budget=4096 \
-  environment.skyrl_gym.chroma_search.search_topk=8 \
+  environment.skyrl_gym.chroma_search.token_budget=2048 \
+  environment.skyrl_gym.chroma_search.search_topk=4 \
   trainer.logger="wandb" \
   trainer.project_name="chroma-skyrl" \
   trainer.run_name="$RUN_NAME" \
