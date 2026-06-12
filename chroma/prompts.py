@@ -3,7 +3,7 @@
 Kept in one module so the dataset builder and the environment never drift.
 """
 
-TOKEN_BUDGET = 4096  # context token budget shown to the agent (soft T/2, hard cutoff at T)
+TOKEN_BUDGET = 2048  # context token budget shown to the agent (soft T/2, hard cutoff at T)
 
 SYSTEM_PROMPT = f"""You are a retrieval subagent. Your job is NOT to answer the question. \
 Your job is to search a document corpus and return the set of chunk ids that contain the \
