@@ -60,7 +60,6 @@ _BM25_CACHE: Dict[Any, Any] = {}
 _TOKENIZER_CACHE: Dict[str, Any] = {}
 _CACHE_LOCK = threading.Lock()
 
-_PRUNED_TEXT = "[pruned]"
 _TAG_RE = re.compile(r"<(search|grep|read|prune|finish)>(.*?)</\1>", re.DOTALL)
 _WORD_RE = re.compile(r"[a-z0-9]+")
 
@@ -240,15 +239,28 @@ class ChromaSearchEnv(BaseTextEnv):
                 if cid in self.gold:
                     self.n_pruned_gold += 1
                 done_ids.append(cid)
-                # in-place context edit: blank this chunk's text in every prior message
-                rx = re.compile(
-                    r'<chunk id="' + re.escape(cid) + r'">.*?</chunk>',
+                # in-place context edit: drop this chunk's entire block (tag + body) in
+                # every prior message so prune fully reclaims its token cost; also drop
+                # the matching <doc title="..."> snippet line for the doc this chunk
+                # belongs to (search results otherwise leave un-prunable footprint).
+                doc_title = cid.split("::")[0]
+                chunk_rx = re.compile(
+                    r'<chunk id="' + re.escape(cid) + r'">.*?</chunk>\n?',
                     re.DOTALL,
                 )
-                replacement = f'<chunk id="{cid}">{_PRUNED_TEXT}</chunk>'
+                doc_rx = re.compile(
+                    r'<doc title="' + re.escape(doc_title) + r'"[^>]*>.*?</doc>\n?',
+                    re.DOTALL,
+                )
                 for msg in self.chat_history:
-                    if msg["role"] == "user" and cid in msg["content"]:
-                        msg["content"] = rx.sub(replacement, msg["content"])
+                    if msg["role"] != "user":
+                        continue
+                    content = msg["content"]
+                    if cid in content:
+                        content = chunk_rx.sub("", content)
+                    if doc_title in content:
+                        content = doc_rx.sub("", content)
+                    msg["content"] = content
             else:
                 missing.append(cid)
         out = f"Pruned {len(done_ids)} chunk(s)."
