@@ -79,6 +79,7 @@ set +e
   environment.skyrl_gym.chroma_search.tokenizer_path="$MODEL" \
   environment.skyrl_gym.chroma_search.token_budget=1024 \
   environment.skyrl_gym.chroma_search.search_topk=8 \
+  environment.skyrl_gym.chroma_search.read_max_chunks=4 \
   trainer.logger="wandb" \
   trainer.project_name="chroma-skyrl" \
   trainer.run_name="$RUN_NAME" \
