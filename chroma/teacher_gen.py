@@ -83,7 +83,7 @@ async def _call(session, model, messages, sem, usage, max_tokens=512, temperatur
     return None
 
 
-async def _rollout(session, model, row, cfg, sem, usage, max_turns):
+async def _rollout(session, model, row, cfg, sem, usage, max_turns, threshold):
     extras = {
         "reward_spec": row["reward_spec"],
         "extra_info": row["extra_info"],
@@ -106,6 +106,17 @@ async def _rollout(session, model, row, cfg, sem, usage, max_turns):
             break
         for obs in out["observations"]:
             messages.append({"role": str(obs["role"]), "content": str(obs["content"])})
+    # Salvage unfinished rollouts that already encountered enough gold chunks:
+    # Kimi-K2 averages ~1.2 tool calls/task and usually drops out via the
+    # `_consecutive_malformed>=2` branch without ever emitting <finish>. If the
+    # trajectory recall is already above threshold, synthesize the obvious
+    # <finish> turn (the intersection of encountered chunks and gold) so the
+    # demo becomes a clean kept example at zero extra teacher cost.
+    if not env.finished and env.get_metrics().get("traj_recall", 0.0) >= threshold:
+        finish_ids = [c for c in env.encountered if c in env.gold]
+        synth = f"<finish>{','.join(finish_ids)}</finish>"
+        messages.append({"role": "assistant", "content": synth})
+        env.step(synth)  # flips finished=True and recomputes final_recall
     m = env.get_metrics()
     return {"messages": messages, "metrics": m}
 
@@ -122,7 +133,7 @@ async def _run(rows, model, cfg, concurrency, max_turns, target, threshold, usag
         while i < len(rows) and len(kept) < target:
             batch = rows[i : i + chunk]
             i += chunk
-            results = await asyncio.gather(*[_rollout(session, model, r, cfg, sem, usage, max_turns) for r in batch])
+            results = await asyncio.gather(*[_rollout(session, model, r, cfg, sem, usage, max_turns, threshold) for r in batch])
             for res in results:
                 attempted += 1
                 if res is None:
