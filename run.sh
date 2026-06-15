@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# SFT cold-start node (Direction 2, step 2): LoRA SFT of Qwen3-1.7B on the teacher
+# SFT cold-start node (Direction 2, step 2): LoRA SFT of Qwen3-4B on the teacher
 # demos (alphaXiv/chroma-sft-traces), export the merged HF model, push it to HF so
 # the RL-from-SFT node can load it. Command is still `bash run.sh`.
 set -euxo pipefail
 cd "$(dirname "$0")"
 ROOT="$PWD"
 
-MODEL="Qwen/Qwen3-1.7B"
+MODEL="Qwen/Qwen3-4B"
 SFT_DATASET="alphaXiv/chroma-sft-traces"
-HF_OUT_NAME="chroma-sft-qwen3-1.7b"
-RUN_NAME="chroma-sft-1.7b"
+HF_OUT_NAME="chroma-sft-qwen3-4b"
+RUN_NAME="chroma-sft-4b"
 NUM_GPUS=$(nvidia-smi -L | wc -l)
 
 # ---------- environment setup (bare-pod fix ladder) ----------
