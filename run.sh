@@ -28,12 +28,12 @@ set +e
   --tokenizer "$MODEL_TOK" \
   --model moonshotai/kimi-k2 \
   --token-budget 4096 \
-  --search-topk 8 \
+  --search-topk 16 \
   --max-tasks 800 \
   --target 400 \
   --recall-threshold 0.8 \
   --concurrency 16 \
-  --max-turns 10 \
+  --max-turns 16 \
   --hf-repo-name chroma-sft-traces \
   2>&1 | tee gen.log
 GEN_EXIT=${PIPESTATUS[0]}
