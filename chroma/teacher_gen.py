@@ -145,7 +145,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--train", default="data/train.parquet")
     ap.add_argument("--corpus", default="data/corpus.jsonl")
-    ap.add_argument("--model", default="moonshotai/kimi-k2")
+    ap.add_argument("--model", default="anthropic/claude-sonnet-4.5")
     ap.add_argument("--tokenizer", default="Qwen/Qwen3-1.7B")
     ap.add_argument("--token-budget", type=int, default=4096)
     ap.add_argument("--search-topk", type=int, default=8)
@@ -157,8 +157,8 @@ def main():
     ap.add_argument("--hf-repo-name", default="chroma-sft-traces")
     ap.add_argument("--out-parquet", default="data/sft_traces.parquet")
     # rough OpenRouter rates ($/M tokens) for the cost tally only
-    ap.add_argument("--price-in", type=float, default=0.55)
-    ap.add_argument("--price-out", type=float, default=2.2)
+    ap.add_argument("--price-in", type=float, default=3.0)
+    ap.add_argument("--price-out", type=float, default=15.0)
     args = ap.parse_args()
 
     or_name, or_key = _first_env(_OR_KEYS)

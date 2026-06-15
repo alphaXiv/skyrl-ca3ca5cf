@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SFT trace-gen node (Direction 2, step 1): drive the REAL chroma_search env with a
-# strong OpenRouter teacher (Kimi K2), keep finished high-recall trajectories, format
-# as `messages`, push to HF. No GPU training here — network/CPU bound; cheap GPU box.
+# strong OpenRouter teacher (Claude Sonnet 4.5), keep finished high-recall trajectories,
+# format as `messages`, push to HF. No GPU training here — network/CPU bound; cheap GPU box.
 # Command is still `bash run.sh` (only the file content differs from the parent RL node).
 set -euxo pipefail
 cd "$(dirname "$0")"
@@ -26,7 +26,7 @@ set +e
   --train data/train.parquet \
   --corpus data/corpus.jsonl \
   --tokenizer "$MODEL_TOK" \
-  --model moonshotai/kimi-k2 \
+  --model anthropic/claude-sonnet-4.5 \
   --token-budget 4096 \
   --search-topk 8 \
   --max-tasks 800 \
