@@ -34,7 +34,7 @@ set +e
   dataset_name="$SFT_DATASET" \
   dataset_split=train \
   messages_key=messages \
-  train_on_what=all_assistant_messages \
+  train_on_what=last_assistant_message \
   max_length=8192 \
   num_epochs=3 \
   batch_size=16 \
