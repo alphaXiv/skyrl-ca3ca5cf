@@ -101,10 +101,10 @@ async def _rollout(session, model, row, cfg, sem, usage, max_turns):
         if text is None:
             return None
         messages.append({"role": "assistant", "content": text})
-        out = env.step(text)
-        if out.done:
+        out = env.step(text)  # BaseTextEnvStepOutput is a TypedDict -> use item access
+        if out["done"]:
             break
-        for obs in out.observations:
+        for obs in out["observations"]:
             messages.append({"role": str(obs["role"]), "content": str(obs["content"])})
     m = env.get_metrics()
     return {"messages": messages, "metrics": m}
