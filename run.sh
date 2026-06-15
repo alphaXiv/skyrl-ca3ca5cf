@@ -48,7 +48,8 @@ set +e
   data.val_data="['$ROOT/data/validation.parquet']" \
   trainer.algorithm.advantage_estimator="grpo" \
   trainer.algorithm.policy_loss_type="cispo" \
-  trainer.algorithm.use_kl_loss=false \
+  trainer.algorithm.use_kl_loss=true \
+  trainer.algorithm.kl_loss_coef=0.001 \
   trainer.policy.model.path="$MODEL" \
   trainer.policy.model.lora.rank=32 \
   trainer.policy.model.lora.alpha=64 \
