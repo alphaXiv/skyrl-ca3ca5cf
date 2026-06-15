@@ -32,8 +32,8 @@ set +e
   --max-tasks 800 \
   --target 400 \
   --recall-threshold 0.8 \
-  --concurrency 24 \
-  --max-turns 8 \
+  --concurrency 16 \
+  --max-turns 10 \
   --hf-repo-name chroma-sft-traces \
   2>&1 | tee gen.log
 GEN_EXIT=${PIPESTATUS[0]}
