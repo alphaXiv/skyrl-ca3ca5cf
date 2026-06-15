@@ -52,7 +52,7 @@ def _coerce_msgs(prompt):
     return out
 
 
-async def _call(session, model, messages, sem, usage, max_tokens=512, temperature=0.7, retries=4):
+async def _call(session, model, messages, sem, usage, max_tokens=1536, temperature=0.3, retries=4):
     import aiohttp
 
     headers = {"Authorization": f"Bearer {usage['or_key']}", "Content-Type": "application/json"}
@@ -83,7 +83,7 @@ async def _call(session, model, messages, sem, usage, max_tokens=512, temperatur
     return None
 
 
-async def _rollout(session, model, row, cfg, sem, usage, max_turns):
+async def _rollout(session, model, row, cfg, sem, usage, max_turns, max_tokens, temperature):
     extras = {
         "reward_spec": row["reward_spec"],
         "extra_info": row["extra_info"],
@@ -97,7 +97,7 @@ async def _rollout(session, model, row, cfg, sem, usage, max_turns):
     messages = _coerce_msgs(row["prompt"])
     env.init(messages)  # chat_history IS `messages` -> budget accounting + prune see the live list
     for _ in range(max_turns):
-        text = await _call(session, model, messages, sem, usage)
+        text = await _call(session, model, messages, sem, usage, max_tokens=max_tokens, temperature=temperature)
         if text is None:
             return None
         messages.append({"role": "assistant", "content": text})
@@ -110,7 +110,7 @@ async def _rollout(session, model, row, cfg, sem, usage, max_turns):
     return {"messages": messages, "metrics": m}
 
 
-async def _run(rows, model, cfg, concurrency, max_turns, target, threshold, usage):
+async def _run(rows, model, cfg, concurrency, max_turns, target, threshold, usage, max_tokens, temperature):
     import aiohttp
 
     sem = asyncio.Semaphore(concurrency)
@@ -122,7 +122,7 @@ async def _run(rows, model, cfg, concurrency, max_turns, target, threshold, usag
         while i < len(rows) and len(kept) < target:
             batch = rows[i : i + chunk]
             i += chunk
-            results = await asyncio.gather(*[_rollout(session, model, r, cfg, sem, usage, max_turns) for r in batch])
+            results = await asyncio.gather(*[_rollout(session, model, r, cfg, sem, usage, max_turns, max_tokens, temperature) for r in batch])
             for res in results:
                 attempted += 1
                 if res is None:
@@ -154,6 +154,8 @@ def main():
     ap.add_argument("--recall-threshold", type=float, default=0.8)
     ap.add_argument("--concurrency", type=int, default=24)
     ap.add_argument("--max-turns", type=int, default=8)
+    ap.add_argument("--max-tokens", type=int, default=1536)
+    ap.add_argument("--temperature", type=float, default=0.3)
     ap.add_argument("--hf-repo-name", default="chroma-sft-traces")
     ap.add_argument("--out-parquet", default="data/sft_traces.parquet")
     # rough OpenRouter rates ($/M tokens) for the cost tally only
@@ -186,7 +188,7 @@ def main():
     usage = {"or_key": or_key, "calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
     t0 = time.time()
     kept, attempted, recall_hist = asyncio.run(
-        _run(rows, args.model, cfg, args.concurrency, args.max_turns, args.target, args.recall_threshold, usage)
+        _run(rows, args.model, cfg, args.concurrency, args.max_turns, args.target, args.recall_threshold, usage, args.max_tokens, args.temperature)
     )
     dt = time.time() - t0
 
