@@ -28,8 +28,8 @@ set +e
 .venv/bin/python -m skyrl.train.main_sft \
   strategy=fsdp \
   model.path="$MODEL" \
-  model.lora.rank=32 \
-  model.lora.alpha=64 \
+  model.lora.rank=64 \
+  model.lora.alpha=128 \
   model.lora.target_modules=all-linear \
   dataset_name="$SFT_DATASET" \
   dataset_split=train \
@@ -41,11 +41,11 @@ set +e
   micro_train_batch_size_per_gpu=1 \
   remove_microbatch_padding=true \
   seed=42 \
-  optimizer_config.lr=1e-4 \
+  optimizer_config.lr=5e-5 \
   optimizer_config.weight_decay=0.0 \
   optimizer_config.max_grad_norm=1.0 \
-  optimizer_config.num_warmup_steps=5 \
-  optimizer_config.scheduler=constant_with_warmup \
+  optimizer_config.num_warmup_steps=20 \
+  optimizer_config.scheduler=cosine \
   placement.num_nodes=1 \
   placement.num_gpus_per_node="$NUM_GPUS" \
   fsdp_config.cpu_offload=false \
