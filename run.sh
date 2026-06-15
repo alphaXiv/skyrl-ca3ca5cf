@@ -48,6 +48,7 @@ set +e
   data.val_data="['$ROOT/data/validation.parquet']" \
   trainer.algorithm.advantage_estimator="grpo" \
   trainer.algorithm.policy_loss_type="cispo" \
+  trainer.algorithm.cispo.cispo_eps_clip_high=1.0 \
   trainer.algorithm.use_kl_loss=false \
   trainer.policy.model.path="$MODEL" \
   trainer.policy.model.lora.rank=32 \
@@ -68,7 +69,7 @@ set +e
   generator.inference_engine.gpu_memory_utilization=0.45 \
   generator.inference_engine.async_engine=true \
   generator.inference_engine.distributed_executor_backend=mp \
-  trainer.epochs=1 \
+  trainer.epochs=3 \
   trainer.update_epochs_per_batch=1 \
   trainer.train_batch_size=32 \
   trainer.policy_mini_batch_size=32 \
